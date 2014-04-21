@@ -1,4 +1,4 @@
 resume
 ======
 
-A resume display tool fro project resumes
+A resume display tool for project resumes
