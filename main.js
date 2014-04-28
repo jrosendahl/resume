@@ -10,9 +10,6 @@ var logger = winston.loggers.get('MainLog');
 function Request(req) {
 	var getCookies = function() {
 		var ret = {};
-		console.log('-------------------------');
-		console.log(req.headers);
-		console.log('-------------------------');
 		if(req.headers.cookie){
 			for(var i in req.headers.cookie.split(';')) {
 				var parts = req.headers.cookie.split(';')[i].split('=');
@@ -188,6 +185,9 @@ function route(request, response, session) {
 			case 'html':
 				returnHTML(err,result);
 				break;
+			case 'json': 
+				json(err, result);
+				break;
 			case 'reroute':
 				reroute(err,result);
 				break;
@@ -217,9 +217,24 @@ function route(request, response, session) {
 			response.statusCode = 200;
 			response.setHeader('Content-Type','text/html; charset=utf-8');
 			response.setHeader('Cache-Control', 'no-cache');
-			console.log(request.cookieHeader());
 			response.setHeader('Set-Cookie', request.cookieHeader());
 			response.write(html.stringifyHTML());
+			response.end();
+		}
+	}
+	function json(err, obj) {
+		if(err) {
+			logger.error(err);
+			logger.error(err.stack);
+			response.writeHead(500, {"Content-Type":"text/plain; charset=utf-8"});
+			response.write("500 Server Error.  Sorry :(");
+			response.end();
+		}
+		else {
+			response.setHeader('Content-Type','text/html; charset=utf-8');
+			response.setHeader('Cache-Control', 'no-cache');
+			response.setHeader('Set-Cookie', request.cookieHeader());
+			response.write(JSON.stringify(obj));
 			response.end();
 		}
 	}
