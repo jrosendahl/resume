@@ -1,13 +1,10 @@
 'use strict';
-module.exports   = function(session, request, callback) {
-
+module.exports   = function(request) {
 	if(request.attributes.username === 'valid' && request.attributes.password === 'user') {
-		session.authenticated = true;
-		return callback(null,'json', true);
+		request.session.authenticated = true;
+		return request.route.reply.json(null, true);
 	}
 	else {
-		return callback(null, 'json', false);
+		return request.route.reply.json(null, true);
 	}
-
-	
 };

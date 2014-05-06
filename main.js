@@ -151,160 +151,6 @@ function Session() {
 
 
 
-function route(request, response, session) {
-	var route;
-	//logger.info(request.url.pathname);
-	request.pathSplit = request.url.pathname.split('/');
-
-	var pathname = request.pathSplit[request.routeIndex];
-
-	function start() {
-		getRoute();
-	}
-
-	function getRoute() {
-		//look for the correct Route
-		try {
-			route = require('./'+pathname);
-		}
-		catch (err){
-			logger.info(err);
-			response.writeHead(404, {"Content-Type":"text/plain; charset=utf-8"});
-			response.write("404 Not found");
-			response.end();
-			return false;
-		}
-		//set current Route
-		doRouteAction();
-	}
-
-
-	function doRouteAction() {
-		route(session,request, function(err,type,result) {
-			switch(type) {
-			case 'html':
-				returnHTML(err,result);
-				break;
-			case 'json': 
-				json(err, result);
-				break;
-			case 'reroute':
-				reroute(err,result);
-				break;
-			case 'redirect':
-				redirect(err,result);
-				break;
-			case 'text':
-				text(err, result);
-				break;
-			case 'binary':
-				binary(err, result);
-				break;
-			}
-
-		});
-	}
-
-	function returnHTML(err, html) {
-		if(err) {
-			logger.error(err);
-			logger.error(err.stack);
-			response.writeHead(500, {"Content-Type":"text/plain; charset=utf-8"});
-			response.write("500 Server Error.  Sorry :(");
-			response.end();
-		}
-		else {
-			response.statusCode = 200;
-			response.setHeader('Content-Type','text/html; charset=utf-8');
-			response.setHeader('Cache-Control', 'no-cache');
-			response.setHeader('Set-Cookie', request.cookieHeader());
-			response.write(html.stringifyHTML());
-			response.end();
-		}
-	}
-	function json(err, obj) {
-		if(err) {
-			logger.error(err);
-			logger.error(err.stack);
-			response.writeHead(500, {"Content-Type":"text/plain; charset=utf-8"});
-			response.write("500 Server Error.  Sorry :(");
-			response.end();
-		}
-		else {
-			response.setHeader('Content-Type','text/html; charset=utf-8');
-			response.setHeader('Cache-Control', 'no-cache');
-			response.setHeader('Set-Cookie', request.cookieHeader());
-			response.write(JSON.stringify(obj));
-			response.end();
-		}
-	}
-
-	function reroute(err,newRoute) {
-		if(err) {
-			logger.error(err);
-			logger.error(err.stack);
-			response.writeHead(500, {"Content-Type":"text/plain; charset=utf-8"});
-			response.write("500 Server Error.  Sorry :(");
-			response.end();
-		}
-		else {
-			request.routeIndex = 1;
-			request.url.pathname = newRoute;
-			route(request,response, session);
-		}
-	}
-
-	function redirect(err,newURL) {
-		if(err) {
-			logger.error(err);
-			logger.error(err.stack);
-			response.writeHead(500, {"Content-Type":"text/plain; charset=utf-8"});
-			response.write("500 Server Error.  Sorry :(");
-			response.end();
-		}
-		else{
-			response.statusCode = 303;
-			response.setHeader('Content-Type','text/html; charset=utf-8');
-			response.setHeader('Location', newURL);
-			response.setHeader('Set-Cookie', request.cookieHeader());
-			response.end();
-		}
-	}
-
-	function text(err, file) {
-		if(err) {
-			response.writeHead(500, {'Content-Type': 'text/plain'});
-			response.write("500 Server Error.  Sorry :(");
-			logger.error(err.stack);
-			response.end();
-		} 
-		else {
-			response.statusCode = 200;
-			response.setHeader('Content-Type',file.contentType);
-			response.setHeader('Set-Cookie', request.cookieHeader());
-			response.write(file.file);
-			response.end();
-		}
-	}
-
-	function binary(err, file) {
-		if(err) {
-			response.writeHead(500, {'Content-Type': 'text/plain'});
-			response.write("500 Server Error.  Sorry :(");
-			logger.error(err.stack);
-			response.end();
-		} 
-		else {
-			response.statusCode = 200;
-			response.setHeader('Content-Type',file.contentType);
-			response.setHeader('Set-Cookie', request.cookieHeader());
-			response.write(file.file,'binary');
-			response.end();
-		}
-	}
-	start();	
-}
-
 
 http.createServer(function (req, res) {
 	//create the request scope
@@ -321,8 +167,6 @@ http.createServer(function (req, res) {
 		delete sessions[request.cookies.sessionid.val];
 	} 
 
-	console.log(request.cookies);
-
 	if(request.cookies.sessionid && sessions[request.cookies.sessionid.val]) {
 		request.session = sessions[request.cookies.sessionid.val];
 		request.session.touch();
@@ -335,10 +179,11 @@ http.createServer(function (req, res) {
 		logger.info('new session: ' + request.session.id);
 	}
 	request.attributes = request.url.query;
-	
 
+	var bubbleRoute = require('bubbleRoute');
+	var route = new bubbleRoute(request, res);
+	
 	if(req.method.toLowerCase() == 'post') {
-		
 		var form = new formidable.IncomingForm();
 		form.parse(req, function(err, fields, files) {
 			for(var keys in fields) {
@@ -346,10 +191,10 @@ http.createServer(function (req, res) {
 				request.attributes[keys] =  fields[keys];
 			}
 			request.files = files;
-			route(request, res, sessions[request.session.id]);
+			route.bubbleDown();
 		});
 	}
 	else {
-		route(request, res, sessions[request.session.id]);
+		route.bubbleDown();
 	}
 }).listen(httpPort);
