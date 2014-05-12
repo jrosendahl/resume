@@ -24,4 +24,11 @@ resumeApp.controller('resumeCtrl', function($scope, $http) {
 				console.log('Error: ' + data);
 			});
 	};
+})
+.directive('ProjectForm', function() {
+	'use strict';
+	return {
+		restruct: 'E',
+		templateURL: '/projectForm.html',
+	};
 });

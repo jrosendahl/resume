@@ -1,4 +1,5 @@
-'use strict';
+app = require('./appMap');
+
 var httpPort = 8081;
 var http = require('http');
 var urlParse = require('url');
@@ -7,7 +8,10 @@ var sessionTimeout = 200000;
 var winston = require('winston');
 var logger = winston.loggers.get('MainLog');
 
+
+
 function Request(req) {
+	'use strict';
 	var getCookies = function() {
 		var ret = {};
 		if(req.headers.cookie){
@@ -89,6 +93,7 @@ function Request(req) {
 
 
 function ErrorHandler() {
+	'use strict';
 	this.errors = [];
 	this.display = function() {
 		var errorMsg = this.getDom();
@@ -120,12 +125,13 @@ function ErrorHandler() {
 }
 
 function Sessions() {
-	
+	'use strict';
 }
 
 var sessions = new Sessions();
 
 function Session() {
+	'use strict';
 	this.id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 		var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 		return v.toString(16);
@@ -153,6 +159,7 @@ function Session() {
 
 
 http.createServer(function (req, res) {
+	'use strict';
 	//create the request scope
 	var request = new Request(req);
 	//find out what controller to use
@@ -160,7 +167,8 @@ http.createServer(function (req, res) {
 	//place the URL in the request Scope
 	request.url = urlParse.parse(req.url, true);
 	if(request.url.pathname == '/') {
-		request.url.pathname = 'index.html';
+		console.log('hello');
+		request.url.pathname = '/index.html';
 	}
 
 	if(request.cookies.sessionid && request.url.pathname == '/user/logout') {
@@ -180,8 +188,16 @@ http.createServer(function (req, res) {
 	}
 	request.attributes = request.url.query;
 
+	var path = require('path');
+    var appDir = path.dirname(require.main.filename);
+    request.appDir = appDir;
+
+
 	var bubbleRoute = require('bubbleRoute');
-	var route = new bubbleRoute(request, res);
+
+	request.route = new bubbleRoute(request, res, appDir+ '/controller');
+
+
 	
 	if(req.method.toLowerCase() == 'post') {
 		var form = new formidable.IncomingForm();
@@ -191,10 +207,10 @@ http.createServer(function (req, res) {
 				request.attributes[keys] =  fields[keys];
 			}
 			request.files = files;
-			route.bubbleDown();
+			request.route.bubbleDown();
 		});
 	}
 	else {
-		route.bubbleDown();
+		request.route.bubbleDown();
 	}
 }).listen(httpPort);
